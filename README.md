@@ -2,6 +2,16 @@
 
 LedgerLens is a Next.js application for deterministic financial reconciliation. It uses Prisma with hosted PostgreSQL, a 560-record synthetic dataset generator with known truth labels, and a modular Gemini recommendation interface without weakening deterministic safeguards.
 
+---
+
+## 🚀 LIVE DEMO
+
+### 👉 **[OPEN LEDGERLENS LIVE APPLICATION](https://ledger-lens-green-delta.vercel.app)**
+
+> **Live Production Deployment:** Vercel + Neon PostgreSQL + Gemini AI
+
+---
+
 ## Setup
 
 1. Copy `.env.example` to `.env`.
