@@ -1,0 +1,1 @@
+export default function Loading() { return <section><div className="eyebrow">Loading operations data</div><h1 className="page-title">Preparing LedgerLens</h1><div className="metric-grid"><div className="skeleton"/><div className="skeleton"/><div className="skeleton"/></div></section>; }

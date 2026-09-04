@@ -1,0 +1,68 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum RecordType {
+  INVOICE
+  BANK_TRANSACTION
+  LEDGER_ENTRY
+  SETTLEMENT
+}
+
+enum RecordStatus {
+  PENDING
+  RECONCILED
+  EXCEPTION
+  UNRESOLVED
+}
+
+enum Decision {
+  AUTO_RECONCILE
+  REVIEW
+  UNRESOLVED
+}
+
+model FinancialRecord {
+  id              String       @id @default(cuid())
+  referenceNumber String
+  amount          Float
+  currency        String       @default("INR")
+  date            DateTime
+  type            RecordType
+  status          RecordStatus @default(PENDING)
+  source          String
+  groundTruth     String?
+  createdAt       DateTime     @default(now())
+  decisions       ReconciliationDecision[]
+  @@index([referenceNumber])
+  @@index([status])
+}
+
+model ReconciliationDecision {
+  id             String          @id @default(cuid())
+  recordId       String
+  record         FinancialRecord @relation(fields: [recordId], references: [id])
+  decision       Decision
+  confidence     Float
+  reason         String
+  action         String
+  previousStatus RecordStatus
+  resultingStatus RecordStatus
+  createdAt      DateTime        @default(now())
+}
+
+model AuditEvent {
+  id        String   @id @default(cuid())
+  action    String
+  recordId  String?
+  reference String?
+  result    String
+  details   String?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}

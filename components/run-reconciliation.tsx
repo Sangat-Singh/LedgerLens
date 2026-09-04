@@ -1,0 +1,3 @@
+"use client";
+import { useState } from "react";
+export function RunReconciliation() { const [state, setState] = useState<"idle" | "running" | "error">("idle"); const run = async () => { setState("running"); try { const response = await fetch("/api/reconcile", { method: "POST" }); if (!response.ok) throw new Error(); window.location.reload(); } catch { setState("error"); } }; return <div><button className="button" disabled={state === "running"} onClick={run}>{state === "running" ? "Processing batch…" : "Run reconciliation batch"}</button>{state === "error" && <p style={{ color: "#f04438", fontSize: 12 }}>The batch could not be completed. Please try again.</p>}</div>; }
