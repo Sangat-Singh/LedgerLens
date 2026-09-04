@@ -1,15 +1,16 @@
 # LedgerLens — AI Finance Controller
 
-LedgerLens is a local MVP foundation for deterministic financial reconciliation. It contains a Next.js interface, SQLite/Prisma data model, a 560-record synthetic dataset generator with known truth labels, and a modular reconciliation decision interface that can later be backed by an LLM without weakening deterministic safeguards.
+LedgerLens is a Next.js application for deterministic financial reconciliation. It uses Prisma with hosted PostgreSQL, a 560-record synthetic dataset generator with known truth labels, and a modular Gemini recommendation interface without weakening deterministic safeguards.
 
 ## Setup
 
 1. Copy `.env.example` to `.env`.
-2. Install packages: `npm install`.
-3. Generate Prisma client: `npm run db:generate`.
-4. Create the SQLite database and migration: `npm run db:migrate -- --name init`. The command creates an empty SQLite file first when needed.
-5. Seed synthetic data: `npm run db:seed`.
-6. Start the application: `npm run dev`.
+2. Copy the Neon pooled connection string to `DATABASE_URL` and the Neon direct connection string to `DATABASE_URL_UNPOOLED`.
+3. Install packages: `npm install`.
+4. Generate Prisma client: `npm run db:generate`.
+5. Apply the PostgreSQL migrations: `npm run db:migrate`.
+6. Seed synthetic data: `npm run db:seed`.
+7. Start the application: `npm run dev`.
 
 Open `http://localhost:3000`.
 
@@ -20,6 +21,8 @@ Set `GEMINI_API_KEY` (and optionally `GEMINI_MODEL`) in `.env` to enable server-
 ## Checks
 
 Run `npm test` for reconciliation-engine unit tests and `npm run build` for the production build.
+
+For Vercel, set `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `GEMINI_API_KEY`, and `GEMINI_MODEL` in the project environment. `DATABASE_URL` is the pooled Neon runtime connection; `DATABASE_URL_UNPOOLED` is used by Prisma for direct migration connections. Run migrations and seeding only after both Neon database variables are configured locally or through a secure deployment workflow.
 
 ## Current first-stage scope
 

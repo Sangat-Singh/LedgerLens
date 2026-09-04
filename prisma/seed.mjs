@@ -4,9 +4,11 @@ const prisma = new PrismaClient();
 const baseDate = new Date("2026-08-01T00:00:00Z");
 
 async function main() {
+  console.log("Clearing existing LedgerLens data...");
   await prisma.auditEvent.deleteMany();
   await prisma.reconciliationDecision.deleteMany();
   await prisma.financialRecord.deleteMany();
+  console.log("Existing data cleared.");
 
   const records = Array.from({ length: 560 }, (_, index) => {
     const group = Math.floor(index / 4);
@@ -29,8 +31,11 @@ async function main() {
     };
   });
 
+  console.log(`Inserting ${records.length} financial records...`);
   await prisma.financialRecord.createMany({ data: records });
+  console.log(`Inserted ${records.length} financial records.`);
   const seeded = await prisma.financialRecord.findMany({ orderBy: { date: "asc" } });
+  console.log(`Loaded ${seeded.length} financial records for reconciliation.`);
   const statusFor = (decision) => decision === "AUTO_RECONCILE" ? RecordStatus.RECONCILED : decision === "REVIEW" ? RecordStatus.EXCEPTION : RecordStatus.UNRESOLVED;
   const decisions = seeded.map((record) => {
     const candidates = seeded.filter((candidate) => candidate.id !== record.id && candidate.type !== record.type && candidate.referenceNumber === record.referenceNumber && candidate.currency === record.currency);
@@ -42,13 +47,18 @@ async function main() {
     const action = exact ? "Reconcile automatically" : amountMatch ? "Review date variance" : candidates.length ? "Review amount mismatch or partial payment" : "Investigate missing or incorrect reference";
     return { record, decision, confidence, reason, action };
   });
-  await prisma.$transaction(decisions.flatMap(({ record, decision, confidence, reason, action }) => [
-    prisma.financialRecord.update({ where: { id: record.id }, data: { status: statusFor(decision) } }),
-    prisma.reconciliationDecision.create({ data: { recordId: record.id, decision, confidence, reason, action, previousStatus: RecordStatus.PENDING, resultingStatus: statusFor(decision) } }),
-    prisma.auditEvent.create({ data: { action: "RECONCILIATION_DECISION", recordId: record.id, reference: record.referenceNumber, result: decision, details: reason } }),
-  ]));
+  const batchSize = 40;
+  for (let start = 0; start < decisions.length; start += batchSize) {
+    const batch = decisions.slice(start, start + batchSize);
+    await prisma.$transaction(batch.flatMap(({ record, decision, confidence, reason, action }) => [
+      prisma.financialRecord.update({ where: { id: record.id }, data: { status: statusFor(decision) } }),
+      prisma.reconciliationDecision.create({ data: { recordId: record.id, decision, confidence, reason, action, previousStatus: RecordStatus.PENDING, resultingStatus: statusFor(decision) } }),
+      prisma.auditEvent.create({ data: { action: "RECONCILIATION_DECISION", recordId: record.id, reference: record.referenceNumber, result: decision, details: reason } }),
+    ]));
+    console.log(`Processed reconciliation batch ${Math.floor(start / batchSize) + 1}/${Math.ceil(decisions.length / batchSize)} (${Math.min(start + batch.length, decisions.length)}/${decisions.length} records).`);
+  }
   await prisma.auditEvent.create({ data: { action: "BATCH_RECONCILIATION", result: "COMPLETED", details: `Processed ${records.length} seeded records.` } });
-  console.log(`Seeded ${records.length} synthetic financial records.`);
+  console.log(`Seeded ${records.length} synthetic financial records with ${decisions.length} reconciliation decisions and ${decisions.length + 1} audit events.`);
 }
 
-main().catch((error) => { console.error(error); process.exit(1); }).finally(() => prisma.$disconnect());
+main().catch((error) => { console.error(error); process.exitCode = 1; }).finally(async () => { await prisma.$disconnect(); });
